@@ -50,6 +50,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.util.ArrayList;
 
 import javax.json.Json;
 import javax.json.stream.JsonGenerator;
@@ -175,6 +178,30 @@ public class Dcm2Json {
             String fname = fname(cl.getArgList());
             if (fname.equals("-")) {
                 main.convert(new DicomInputStream(System.in), System.out);
+            } else if (fname.equals("+")) {
+                // Special treatment for '+': find a list of files to process in a single batch.
+                ArrayList<String> arr = new ArrayList<String>();
+                BufferedReader br = null;
+                try {
+                    br = new BufferedReader(new FileReader("filelist"));
+                    String currLine;
+
+                    while ((currLine = br.readLine()) != null) {
+                        arr.add(currLine);
+                    }
+
+                    for (String fnam : arr) {
+                        // Wrap each file with a file input stream so that the underlying
+                        // DicomInputStream will create a separate bulk file rather than
+                        // referring to an offset within the original file.
+
+                        // TODO: Need to handle stdout properly for each batch too!
+                        FileInputStream fis = new FileInputStream(new File(fnam));
+                        main.convert(new DicomInputStream(fis), System.out);
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             } else {
                 main.convert(new File(fname), System.out);
             }
